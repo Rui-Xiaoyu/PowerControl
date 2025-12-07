@@ -57,10 +57,7 @@ jobs:
         with:
           repository: QDU-Robomaster/Chassis
           path: Modules/Chassis
-
-      - name: Pull libxr to ./libxr
-        run: git clone --depth=1 https://github.com/Jiu-xiao/libxr ./libxr
-
+          
       - name: Setup Python & Install deps
         run: |
           python3 -m pip install --upgrade pip
