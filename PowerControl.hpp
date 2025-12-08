@@ -5,7 +5,6 @@
 module_description: No description provided
 constructor_args:
   - task_stack_depth: 2048
-  - chassis: '@&omni_chassis'
   - superpower: '@&super_power'
 template_args:
   - ChassisType: Omni
@@ -34,10 +33,9 @@ template <typename ChassisType>
 class PowerControl : public LibXR::Application {
  public:
   PowerControl(LibXR::HardwareContainer &hw, LibXR::ApplicationManager &app,
-               uint32_t task_stack_depth, ChassisType *chassis,
+               uint32_t task_stack_depth,
                SuperPower *superpower)
       : topic_powercontrol_data_("powercontrol_data", sizeof(powercontrol_data_)),
-        chassis_(chassis),
         superpower_(superpower),
         rls_(1e-5f, 0.99999f) {
 
@@ -185,7 +183,6 @@ class PowerControl : public LibXR::Application {
   typedef typename ChassisType::MotorData MotorData;
   MotorData motor_data_;
 
-  ChassisType *chassis_;
   SuperPower *superpower_;
 
   Matrixf<2, 1> samples_;

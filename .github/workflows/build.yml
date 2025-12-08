@@ -52,21 +52,16 @@ jobs:
       - name: Pull libxr to ./libxr
         run: git clone --depth=1 https://github.com/Jiu-xiao/libxr ./libxr
 
-      - name: Checkout Chassis module
-        uses: actions/checkout@v4
-        with:
-          repository: QDU-Robomaster/Chassis
-          path: Modules/Chassis
-      - name: Checkout CMD module
-        uses: actions/checkout@v4
-        with:
-          repository: QDU-Robomaster/CMD
-          path: Modules/CMD
       - name: Checkout SuperPower module
         uses: actions/checkout@v4
         with:
           repository: QDU-Robomaster/SuperPower
           path: Modules/SuperPower
+      - name: Checkout Matrix module
+        uses: actions/checkout@v4
+        with:
+          repository: QDU-Robomaster/Matrix
+          path: Modules/Matrix
       - name: Setup Python & Install deps
         run: |
           python3 -m pip install --upgrade pip
@@ -91,9 +86,7 @@ jobs:
       - name: Add modules
         run: |
           xrobot_add_mod BlinkLED --instance-id BlinkLED_0
-          xrobot_add_mod Chassis --instance-id omni_chassis
           xrobot_add_mod SuperPower --instance-id super_power
-          xrobot_add_mod CMD --instance-id cmd
 
       - name: Add this repo module
         run: |
