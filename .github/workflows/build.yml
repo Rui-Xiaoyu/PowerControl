@@ -46,6 +46,12 @@ jobs:
           repository: QDU-Robomaster/CMD
           path: bsp-dev-c/Modules/CMD
 
+      - name: Checkout Chassis module
+        uses: actions/checkout@v4
+        with:
+          repository: QDU-Robomaster/Chassis
+          path: bsp-dev-c/Modules/Chassis
+
       - name: Checkout SuperPower module
         uses: actions/checkout@v4
         with:
