@@ -9,8 +9,7 @@ class RLS {
  public:
   RLS() = delete;  // 必须只能带参数的构造函数
 
-  constexpr RLS(float delta_,
-                float lambda_)
+  constexpr RLS(float delta_, float lambda_)
       : dimension_(dim),
         lambda_(lambda_),
         delta_(delta_),
@@ -25,7 +24,7 @@ class RLS {
     paramsvector_ = matrixf::zeros<dim, 1>();
   }
 
-  const Matrixf<dim, 1> &Update(Matrixf<dim, 1> &sampleVector,
+  const Matrixf<dim, 1>& Update(Matrixf<dim, 1>& sampleVector,
                                 float actualOutput) {
     gainvector_ =
         (transmatrix_ * sampleVector) /
@@ -34,8 +33,7 @@ class RLS {
         lambda_;
     paramsvector_ +=
         gainvector_ *
-        (actualOutput -
-         (sampleVector.Trans() * paramsvector_)[0][0]);
+        (actualOutput - (sampleVector.Trans() * paramsvector_)[0][0]);
     transmatrix_ =
         (transmatrix_ - gainvector_ * sampleVector.Trans() * transmatrix_) /
         lambda_;
@@ -43,7 +41,7 @@ class RLS {
     return paramsvector_;
   }
 
-  void SetParamVector(const Matrixf<dim, 1> &updatedParams) {
+  void SetParamVector(const Matrixf<dim, 1>& updatedParams) {
     paramsvector_ = updatedParams;
     defaultparamsvector_ = updatedParams;
   }

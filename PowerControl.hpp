@@ -82,8 +82,8 @@ struct PowerControlData {
 
 class PowerControl : public LibXR::Application {
  public:
-  PowerControl(LibXR::HardwareContainer &hw, LibXR::ApplicationManager &app,
-               SuperPower *superpower, bool is_helm = false,
+  PowerControl(LibXR::HardwareContainer& hw, LibXR::ApplicationManager& app,
+               SuperPower* superpower, bool is_helm = false,
                float chassis_static_power_loss = 0.0f)
       : superpower_(superpower),
         is_helm_(is_helm),
@@ -294,7 +294,7 @@ class PowerControl : public LibXR::Application {
 
  private:
   LibXR::Mutex mutex_;
-  SuperPower *superpower_;
+  SuperPower* superpower_;
   bool is_helm_;
   RLS<2> rls_;
   PowerControlData powercontrol_data_;
