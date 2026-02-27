@@ -6,7 +6,9 @@ module_description: Power control for chassis (supports omni and helm wheel)
 constructor_args:
   - superpower: '@&super_power'
   - is_helm: false
-  - chassis_static_power_loss: 0.5
+  - chassis_static_power_loss: 3.5
+  - motor_count_3508: 4
+  - motor_count_6020: 0
 template_args: []
 required_hardware: []
 depends: []
@@ -82,13 +84,18 @@ struct PowerControlData {
 
 class PowerControl : public LibXR::Application {
  public:
+  static constexpr int MAX_MOTOR_COUNT = 6;  /* 最大电机数目 */
+
   PowerControl(LibXR::HardwareContainer& hw, LibXR::ApplicationManager& app,
                SuperPower* superpower, bool is_helm = false,
-               float chassis_static_power_loss = 0.0f)
+               float chassis_static_power_loss = 0.0f,
+               int motor_count_3508 = 4, int motor_count_6020 = 4)
       : superpower_(superpower),
         is_helm_(is_helm),
         rls_(1e-5f, 0.99999f),
-        k3_chassis_(chassis_static_power_loss) {
+        k3_chassis_(chassis_static_power_loss),
+        motor_count_3508_(motor_count_3508 > MAX_MOTOR_COUNT ? MAX_MOTOR_COUNT : motor_count_3508),
+        motor_count_6020_(motor_count_6020 > MAX_MOTOR_COUNT ? MAX_MOTOR_COUNT : motor_count_6020) {
     UNUSED(hw);
     UNUSED(app);
     params_3508_[0][0] = 2.0e-07f;
@@ -97,15 +104,15 @@ class PowerControl : public LibXR::Application {
     k2_3508_ = params_3508_[1][0];
   }
 
-  void SetMotorData3508(float output_current[4], float rotorspeed_rpm[4]) {
-    for (int i = 0; i < 4; i++) {
+  void SetMotorData3508(float* output_current, float* rotorspeed_rpm) {
+    for (int i = 0; i < motor_count_3508_; i++) {
       output_current_3508_[i] = output_current[i];
       rotorspeed_rpm_3508_[i] = rotorspeed_rpm[i];
     }
   }
 
-  void SetMotorData6020(float output_current[4], float rotorspeed_rpm[4]) {
-    for (int i = 0; i < 4; i++) {
+  void SetMotorData6020(float* output_current, float* rotorspeed_rpm) {
+    for (int i = 0; i < motor_count_6020_; i++) {
       output_current_6020_[i] = output_current[i];
       rotorspeed_rpm_6020_[i] = rotorspeed_rpm[i];
     }
@@ -120,7 +127,7 @@ class PowerControl : public LibXR::Application {
 
     float mechanical_power = 0;
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < motor_count_3508_; i++) {
       samples_3508_[0][0] += output_current_3508_[i] * output_current_3508_[i];
       samples_3508_[1][0] += rotorspeed_rpm_3508_[i] * rotorspeed_rpm_3508_[i];
       mechanical_power +=
@@ -132,7 +139,7 @@ class PowerControl : public LibXR::Application {
 
     if (is_helm_) {
       float power_6020 = 0;
-      for (int i = 0; i < 4; i++) {
+      for (int i = 0; i < motor_count_6020_; i++) {
         power_6020 += calculate_motor_model_power(output_current_6020_[i],
                                                   rotorspeed_rpm_6020_[i],
                                                   kt_6020_, k1_6020_, k2_6020_);
@@ -171,7 +178,7 @@ class PowerControl : public LibXR::Application {
 
     float available_power = max_power - k3_chassis_;
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < motor_count_3508_; i++) {
       motor_power_3508_[i] = calculate_motor_model_power(
           output_current_3508_[i], rotorspeed_rpm_3508_[i], kt_3508_, k1_3508_,
           k2_3508_);
@@ -186,7 +193,7 @@ class PowerControl : public LibXR::Application {
     if (required_power_3508_sum > available_power) {
       powercontrol_data_.is_power_limited = true;
 
-      for (int i = 0; i < 4; i++) {
+      for (int i = 0; i < motor_count_3508_; i++) {
         if (motor_power_3508_[i] > 0) {
           float power_quota = available_power *
                               (motor_power_3508_[i] / required_power_3508_sum);
@@ -212,7 +219,7 @@ class PowerControl : public LibXR::Application {
     /*初始可用功率 = 最大功率 - 静态功耗*/
     float available_power = max_power - k3_chassis_;
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < motor_count_3508_; i++) {
       motor_power_3508_[i] = calculate_motor_model_power(
           output_current_3508_[i], rotorspeed_rpm_3508_[i], kt_3508_, k1_3508_,
           k2_3508_);
@@ -222,7 +229,9 @@ class PowerControl : public LibXR::Application {
       } else {
         available_power -= motor_power_3508_[i];
       }
+    }
 
+    for (int i = 0; i < motor_count_6020_; i++) {
       motor_power_6020_[i] = calculate_motor_model_power(
           output_current_6020_[i], rotorspeed_rpm_6020_[i], kt_6020_, k1_6020_,
           k2_6020_);
@@ -248,7 +257,7 @@ class PowerControl : public LibXR::Application {
       float limit_power_3508_total =
           std::max(0.0f, available_power - limit_power_6020_total);
 
-      for (int i = 0; i < 4; i++) {
+      for (int i = 0; i < motor_count_6020_; i++) {
         if (motor_power_6020_[i] > 0) {
           /*该电机的功率配额 = 总限额 * (该电机需求 / 总需求)*/
           float power_quota = limit_power_6020_total *
@@ -265,7 +274,7 @@ class PowerControl : public LibXR::Application {
         }
       }
 
-      for (int i = 0; i < 4; i++) {
+      for (int i = 0; i < motor_count_3508_; i++) {
         if (motor_power_3508_[i] > 0) {
           /*该电机的功率配额 = 总限额 * (该电机需求 / 总需求)*/
           float power_quota = limit_power_3508_total *
@@ -285,8 +294,10 @@ class PowerControl : public LibXR::Application {
     } else {
       /*功率充足，不限制*/
       powercontrol_data_.is_power_limited = false;
-      for (int i = 0; i < 4; i++) {
+      for (int i = 0; i < motor_count_3508_; i++) {
         powercontrol_data_.new_output_current_3508[i] = output_current_3508_[i];
+      }
+      for (int i = 0; i < motor_count_6020_; i++) {
         powercontrol_data_.new_output_current_6020[i] = output_current_6020_[i];
       }
     }
@@ -298,6 +309,10 @@ class PowerControl : public LibXR::Application {
   bool is_helm_;
   RLS<2> rls_;
   PowerControlData powercontrol_data_;
+  float k3_chassis_;        /* 底盘静态功耗 */
+
+  int motor_count_3508_;    /* 3508电机数目 */
+  int motor_count_6020_;    /* 6020电机数目 */
 
   float kt_3508_ = 1.99688994e-6f;
   float k1_3508_ = 0;
@@ -305,18 +320,17 @@ class PowerControl : public LibXR::Application {
   Matrixf<2, 1> samples_3508_;
   Matrixf<2, 1> params_3508_;
 
-  float output_current_3508_[4] = {};
-  float rotorspeed_rpm_3508_[4] = {};
-  float motor_power_3508_[4] = {};
+  float output_current_3508_[MAX_MOTOR_COUNT] = {};
+  float rotorspeed_rpm_3508_[MAX_MOTOR_COUNT] = {};
+  float motor_power_3508_[MAX_MOTOR_COUNT] = {};
 
   float kt_6020_ = 1.42074505e-5f;
   float k1_6020_ = 6.4276e-7f;
   float k2_6020_ = 1.0e-10f;
 
-  float output_current_6020_[4] = {};
-  float rotorspeed_rpm_6020_[4] = {};
-  float motor_power_6020_[4] = {};
+  float output_current_6020_[MAX_MOTOR_COUNT] = {};
+  float rotorspeed_rpm_6020_[MAX_MOTOR_COUNT] = {};
+  float motor_power_6020_[MAX_MOTOR_COUNT] = {};
 
   float measured_power_ = 0.0f;
-  float k3_chassis_;
 };
