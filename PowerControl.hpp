@@ -76,7 +76,7 @@ inline float solve_current_for_power(float target_power, float rpm, float kt,
   return std::clamp(final_current, -16384.0f, 16384.0f);
 }
 
-static constexpr int POWER_CONTROL_MAX_MOTOR_COUNT = 6;  /* 最大电机数目 */
+static constexpr int POWER_CONTROL_MAX_MOTOR_COUNT = 6; /* 最大电机数目 */
 
 struct PowerControlData {
   float new_output_current_3508[POWER_CONTROL_MAX_MOTOR_COUNT] = {};
@@ -90,14 +90,18 @@ class PowerControl : public LibXR::Application {
 
   PowerControl(LibXR::HardwareContainer& hw, LibXR::ApplicationManager& app,
                SuperPower* superpower, bool is_helm = false,
-               float chassis_static_power_loss = 0.0f,
-               int motor_count_3508 = 4, int motor_count_6020 = 4)
+               float chassis_static_power_loss = 0.0f, int motor_count_3508 = 4,
+               int motor_count_6020 = 4)
       : superpower_(superpower),
         is_helm_(is_helm),
         rls_(1e-5f, 0.99999f),
         k3_chassis_(chassis_static_power_loss),
-        motor_count_3508_(motor_count_3508 > MAX_MOTOR_COUNT ? MAX_MOTOR_COUNT : motor_count_3508),
-        motor_count_6020_(motor_count_6020 > MAX_MOTOR_COUNT ? MAX_MOTOR_COUNT : motor_count_6020) {
+        motor_count_3508_(motor_count_3508 > MAX_MOTOR_COUNT
+                              ? MAX_MOTOR_COUNT
+                              : motor_count_3508),
+        motor_count_6020_(motor_count_6020 > MAX_MOTOR_COUNT
+                              ? MAX_MOTOR_COUNT
+                              : motor_count_6020) {
     UNUSED(hw);
     UNUSED(app);
     params_3508_[0][0] = 2.0e-07f;
@@ -316,10 +320,10 @@ class PowerControl : public LibXR::Application {
   bool is_helm_;
   RLS<2> rls_;
   PowerControlData powercontrol_data_;
-  float k3_chassis_;            /* 底盘静态功耗 */
+  float k3_chassis_; /* 底盘静态功耗 */
 
-  int motor_count_3508_;        /* 3508电机数目 */
-  int motor_count_6020_;        /* 6020电机数目 */
+  int motor_count_3508_; /* 3508电机数目 */
+  int motor_count_6020_; /* 6020电机数目 */
 
   float kt_3508_ = 1.99688994e-6f;
   float k1_3508_ = 0;
