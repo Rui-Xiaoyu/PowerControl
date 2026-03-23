@@ -15,19 +15,17 @@ depends: []
 === END MANIFEST === */
 // clang-format on
 
+#include <Eigen/Core>
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 
-#include "RLS.hpp"
-#include "SuperPower.hpp"
-#include "app_framework.hpp"
-#include "matrix.h"
+#include <Eigen/Core>
 #include "message.hpp"
-#include "thread.hpp" 
+#include "thread.hpp"
 
-#define ERROR_POWERDISTRIBUTION_SET 40
-#define POP_POWERDISTRIBUTION 20
+#define ERROR_POWERDISTRIBUTION_SET 20
+#define POP_POWERDISTRIBUTION 15
 
 /**
  * @brief 计算单个电机模型预测功率 (不含静态损耗)
@@ -96,10 +94,10 @@ class PowerControl : public LibXR::Application {
                               : motor_count_6020) {
     UNUSED(hw);
     UNUSED(app);
-    params_3508_[0][0] = 1.0e-07f;
-    params_3508_[1][0] = 1.0e-07f;
-    k1_3508_ = params_3508_[0][0];
-    k2_3508_ = params_3508_[1][0];
+    params_3508_(0, 0) = 2.0e-07f;
+    params_3508_(1, 0) = 3.0e-07f;
+    k1_3508_ = params_3508_(0, 0);
+    k2_3508_ = params_3508_(1, 0);
   }
 
   void SetMotorData3508(float* output_current, float* rotorspeed_rpm,
@@ -127,15 +125,15 @@ class PowerControl : public LibXR::Application {
   void CalculatePowerControlParam() {
     /*从超电得到底盘的真实功率*/
     measured_power_ = superpower_->GetChassisPower();
-    samples_3508_[0][0] = 0;
-    samples_3508_[1][0] = 0;
+    samples_3508_(0, 0) = 0;
+    samples_3508_(1, 0) = 0;
     bool online = superpower_->IsOnline();
 
     float mechanical_power = 0;
 
     for (int i = 0; i < motor_count_3508_; i++) {
-      samples_3508_[0][0] += output_current_3508_[i] * output_current_3508_[i];
-      samples_3508_[1][0] += rotorspeed_rpm_3508_[i] * rotorspeed_rpm_3508_[i];
+      samples_3508_(0, 0) += output_current_3508_[i] * output_current_3508_[i];
+      samples_3508_(1, 0) += rotorspeed_rpm_3508_[i] * rotorspeed_rpm_3508_[i];
       mechanical_power +=
           kt_3508_ * output_current_3508_[i] * rotorspeed_rpm_3508_[i];
     }
@@ -155,8 +153,8 @@ class PowerControl : public LibXR::Application {
 
     if (residual > 0 && online && measured_power_ > 5.0f) {
       params_3508_ = rls_.Update(samples_3508_, residual);
-      k1_3508_ = static_cast<float>(fmax(params_3508_[0][0], 1.0e-07f));
-      k2_3508_ = static_cast<float>(fmax(params_3508_[1][0], 1.0e-07f));
+      k1_3508_ = static_cast<float>(fmax(params_3508_(0, 0), 1.0e-07f));
+      k2_3508_ = static_cast<float>(fmax(params_3508_(1, 0), 1.0e-07f));
     }
   }
 
@@ -178,12 +176,18 @@ class PowerControl : public LibXR::Application {
     return data;
   }
 
+  float GetMeasuredPower() const { return measured_power_; }
+
+  float GetCapEnergy() { return superpower_->GetCapEnergy(); }
+
+  bool IsOnline() { return superpower_->IsOnline(); }
+
   void OnMonitor() override {}
 
  private:
   void OutputLimitOmni(float max_power) {
     float required_power_3508_sum = 0.0f;
-    float available_power = max_power - k3_chassis_;
+    float available_power = max_power - k3_chassis_ - 3.0f;
 
     /* 计算每个电机功率, 并累计正功电机的误差之和 */
     sum_error_ = 0.0f;
@@ -253,7 +257,7 @@ class PowerControl : public LibXR::Application {
     float sum_error_6020 = 0.0f;
 
     /*初始可用功率 = 最大功率 - 静态功耗*/
-    float available_power = max_power - k3_chassis_;
+    float available_power = max_power - k3_chassis_ - 3.0;
 
     for (int i = 0; i < motor_count_3508_; i++) {
       motor_power_3508_[i] = calculate_motor_model_power(
@@ -326,7 +330,7 @@ class PowerControl : public LibXR::Application {
         }
       }
 
-      /* 3508 组: 误差置信度 + 混合权重分配 */
+      /*误差置信度 + 混合权重分配 */
       float ec_3508 = 0.0f;
       if (sum_error_3508 > ERROR_POWERDISTRIBUTION_SET) {
         ec_3508 = 1.0f;
@@ -389,8 +393,8 @@ class PowerControl : public LibXR::Application {
   float kt_3508_ = 1.99688994e-6f;
   float k1_3508_ = 0;
   float k2_3508_ = 0;
-  Matrixf<2, 1> samples_3508_;
-  Matrixf<2, 1> params_3508_;
+  Eigen::Matrix<float, 2, 1> samples_3508_;
+  Eigen::Matrix<float, 2, 1> params_3508_;
 
   float output_current_3508_[MAX_MOTOR_COUNT] = {};
   float rotorspeed_rpm_3508_[MAX_MOTOR_COUNT] = {};
