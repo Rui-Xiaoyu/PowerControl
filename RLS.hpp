@@ -40,19 +40,21 @@ class RLS {
    * @brief 执行一次 RLS 更新
    * @param sampleVector 输入样本向量
    * @param actualOutput 实际输出
-     * @return const ParamVector& 当前参数估计
+   * @return const ParamVector& 当前参数估计
    */
-    const ParamVector& Update(const ParamVector& sample_vector, float actual_output) {
-    gainvector_ =
-      (transmatrix_ * sample_vector) /
-      (1.0f + (sample_vector.transpose() * transmatrix_ * sample_vector)(0, 0) / lambda_) /
-      lambda_;
+  const ParamVector& Update(const ParamVector& sample_vector,
+                            float actual_output) {
+    gainvector_ = (transmatrix_ * sample_vector) /
+                  (1.0f + (sample_vector.transpose() * transmatrix_ *
+                           sample_vector)(0, 0) /
+                              lambda_) /
+                  lambda_;
     paramsvector_ +=
-      gainvector_ *
-      (actual_output - (sample_vector.transpose() * paramsvector_)(0, 0));
-    transmatrix_ =
-      (transmatrix_ - gainvector_ * sample_vector.transpose() * transmatrix_) /
-        lambda_;
+        gainvector_ *
+        (actual_output - (sample_vector.transpose() * paramsvector_)(0, 0));
+    transmatrix_ = (transmatrix_ -
+                    gainvector_ * sample_vector.transpose() * transmatrix_) /
+                   lambda_;
 
     return paramsvector_;
   }

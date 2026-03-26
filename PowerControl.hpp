@@ -4,7 +4,7 @@
 module_name: PowerControl
 module_description: Power control for chassis (supports omni and helm wheel)
 constructor_args:
-  - superpower: '@&super_power'
+  - superpower: '@&superpower'
   - is_helm: false
   - chassis_static_power_loss: 3.5
   - motor_count_3508: 4
@@ -15,11 +15,10 @@ depends: []
 === END MANIFEST === */
 // clang-format on
 
+#include <Eigen/Core>
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
-
-#include <Eigen/Core>
 
 #include "RLS.hpp"
 #include "SuperPower.hpp"
@@ -135,8 +134,8 @@ class PowerControl : public LibXR::Application {
     float mechanical_power = 0;
 
     for (int i = 0; i < motor_count_3508_; i++) {
-        samples_3508_(0, 0) += output_current_3508_[i] * output_current_3508_[i];
-        samples_3508_(1, 0) += rotorspeed_rpm_3508_[i] * rotorspeed_rpm_3508_[i];
+      samples_3508_(0, 0) += output_current_3508_[i] * output_current_3508_[i];
+      samples_3508_(1, 0) += rotorspeed_rpm_3508_[i] * rotorspeed_rpm_3508_[i];
       mechanical_power +=
           kt_3508_ * output_current_3508_[i] * rotorspeed_rpm_3508_[i];
     }
@@ -181,7 +180,7 @@ class PowerControl : public LibXR::Application {
 
   float GetMeasuredPower() const { return measured_power_; }
 
-  float GetPercent() { return superpower_->GetPercentage(); }
+  float GetCapEnergy() { return superpower_->GetCapEnergy(); }
 
   bool IsOnline() { return superpower_->IsOnline(); }
 
