@@ -4,7 +4,7 @@
 module_name: PowerControl
 module_description: Power control for chassis (supports omni and helm wheel)
 constructor_args:
-  - superpower: '@&super_power'
+  - superpower: '@&superpower'
   - is_helm: false
   - chassis_static_power_loss: 3.5
   - motor_count_3508: 4
