@@ -24,7 +24,6 @@ class RLS {
         delta_(delta_),
         defaultparamsvector_(ParamVector::Zero()) {
     this->Reset();     // 初始化各个矩阵
-    this->Validate();  // 验证参数合法性
   }
 
   /**
@@ -69,13 +68,6 @@ class RLS {
   }
 
  private:
-  /**
-   * @brief 校验构造参数合法性
-   */
-  void Validate() const {
-    configASSERT(lambda_ >= 0.0f || lambda_ <= 1.0f);
-    configASSERT(delta_ > 0);
-  }
 
   uint32_t dimension_;
   float lambda_;
