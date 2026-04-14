@@ -1,6 +1,6 @@
-#include <Eigen/Core>
-
 #pragma once
+
+#include <Eigen/Core>
 
 /**
  * @brief 递归最小二乘（RLS）估计器
@@ -23,7 +23,7 @@ class RLS {
         lambda_(lambda_),
         delta_(delta_),
         defaultparamsvector_(ParamVector::Zero()) {
-    this->Reset();     // 初始化各个矩阵
+    this->Reset();  // 初始化各个矩阵
   }
 
   /**
@@ -68,7 +68,6 @@ class RLS {
   }
 
  private:
-
   uint32_t dimension_;
   float lambda_;
   float delta_;
