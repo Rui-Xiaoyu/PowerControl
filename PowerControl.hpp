@@ -81,10 +81,10 @@ class PowerControl : public LibXR::Application {
   static constexpr int MAX_MOTOR_COUNT = POWER_CONTROL_MAX_MOTOR_COUNT;
 
   PowerControl(LibXR::HardwareContainer& hw, LibXR::ApplicationManager& app,
-               SuperPower* superpower, bool is_helm = false,
+               SuperPower* super_power, bool is_helm = false,
                float chassis_static_power_loss = 0.0f, int motor_count_3508 = 4,
                int motor_count_6020 = 4)
-      : superpower_(superpower),
+      : superpower_(super_power),
         is_helm_(is_helm),
         rls_(1e-5f, 0.99999f),
         k3_chassis_(chassis_static_power_loss),
@@ -259,7 +259,7 @@ class PowerControl : public LibXR::Application {
     float sum_error_6020 = 0.0f;
 
     /*初始可用功率 = 最大功率 - 静态功耗*/
-    float available_power = max_power - k3_chassis_ - 3.0;
+    float available_power = max_power - k3_chassis_;
 
     for (int i = 0; i < motor_count_3508_; i++) {
       motor_power_3508_[i] = calculate_motor_model_power(
