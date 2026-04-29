@@ -104,6 +104,7 @@ class PowerControl : public LibXR::Application {
 
   void SetMotorData3508(float* output_current, float* rotorspeed_rpm,
                         float* speed_error = nullptr) {
+    LibXR::Mutex::LockGuard lock(mutex_);
     for (int i = 0; i < motor_count_3508_; i++) {
       output_current_3508_[i] = output_current[i];
       rotorspeed_rpm_3508_[i] = rotorspeed_rpm[i];
@@ -115,6 +116,7 @@ class PowerControl : public LibXR::Application {
 
   void SetMotorData6020(float* output_current, float* rotorspeed_rpm,
                         float* speed_error = nullptr) {
+    LibXR::Mutex::LockGuard lock(mutex_);
     for (int i = 0; i < motor_count_6020_; i++) {
       output_current_6020_[i] = output_current[i];
       rotorspeed_rpm_6020_[i] = rotorspeed_rpm[i];
@@ -125,6 +127,7 @@ class PowerControl : public LibXR::Application {
   }
 
   void CalculatePowerControlParam() {
+    LibXR::Mutex::LockGuard lock(mutex_);
     /*从超电得到底盘的真实功率*/
     measured_power_ = superpower_->GetChassisPower();
     samples_3508_(0, 0) = 0;
@@ -161,21 +164,17 @@ class PowerControl : public LibXR::Application {
   }
 
   void OutputLimit(float max_power) {
-    mutex_.Lock();
+    LibXR::Mutex::LockGuard lock(mutex_);
     if (is_helm_) {
       OutputLimitHelm(max_power);
     } else {
       OutputLimitOmni(max_power);
     }
-    mutex_.Unlock();
   }
 
   PowerControlData GetPowerControlData() {
-    PowerControlData data;
-    mutex_.Lock();
-    data = powercontrol_data_;
-    mutex_.Unlock();
-    return data;
+    LibXR::Mutex::LockGuard lock(mutex_);
+    return powercontrol_data_;
   }
 
   float GetMeasuredPower() const { return measured_power_; }
