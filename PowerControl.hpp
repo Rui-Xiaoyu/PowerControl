@@ -28,6 +28,7 @@ depends: []
 
 #define ERROR_POWERDISTRIBUTION_SET 20
 #define POP_POWERDISTRIBUTION 15
+#define CHASSIS_POWER_LIMIT_MARGIN_W 4.0f /* 底盘限功率余量 */
 
 /**
  * @brief 计算单个电机模型预测功率 (不含静态损耗)
@@ -48,16 +49,17 @@ inline float solve_current_for_power(float target_power, float rpm, float kt,
   float c = k2 * rpm * rpm - target_power;
   float delta = b * b - 4.0f * a * c;
 
-  float sqrt_delta = sqrtf(delta);
-  float x1 = (-b + sqrt_delta) / (2.0f * a);
-  float x2 = (-b - sqrt_delta) / (2.0f * a);
   float x3 = -b / (2.0f * a);
 
   float final_current = 0;
 
   if (delta < 1e-9f) {
-    original_current = x3;
+    final_current = x3;
   } else {
+    float sqrt_delta = sqrtf(delta);
+    float x1 = (-b + sqrt_delta) / (2.0f * a);
+    float x2 = (-b - sqrt_delta) / (2.0f * a);
+
     if (original_current >= 0) {
       final_current = x1;
     } else {
@@ -188,7 +190,8 @@ class PowerControl : public LibXR::Application {
  private:
   void OutputLimitOmni(float max_power) {
     float required_power_3508_sum = 0.0f;
-    float available_power = max_power - k3_chassis_ - 3.0f;
+    float available_power =
+        max_power - k3_chassis_ - CHASSIS_POWER_LIMIT_MARGIN_W;
 
     /* 计算每个电机功率, 并累计正功电机的误差之和 */
     sum_error_ = 0.0f;
@@ -257,8 +260,9 @@ class PowerControl : public LibXR::Application {
     float sum_error_3508 = 0.0f;
     float sum_error_6020 = 0.0f;
 
-    /*初始可用功率 = 最大功率 - 静态功耗*/
-    float available_power = max_power - k3_chassis_;
+    /* 舵轮需要给模型误差和控制延迟留余量 */
+    float available_power =
+        std::max(0.0f, max_power - k3_chassis_ - CHASSIS_POWER_LIMIT_MARGIN_W);
 
     for (int i = 0; i < motor_count_3508_; i++) {
       motor_power_3508_[i] = calculate_motor_model_power(
@@ -268,8 +272,6 @@ class PowerControl : public LibXR::Application {
       if (motor_power_3508_[i] > 0) {
         required_power_3508_sum += motor_power_3508_[i];
         sum_error_3508 += speed_error_3508_[i];
-      } else {
-        available_power -= motor_power_3508_[i];
       }
     }
 
@@ -281,8 +283,6 @@ class PowerControl : public LibXR::Application {
       if (motor_power_6020_[i] > 0) {
         required_power_6020_sum += motor_power_6020_[i];
         sum_error_6020 += speed_error_6020_[i];
-      } else {
-        available_power -= motor_power_6020_[i];
       }
     }
 
